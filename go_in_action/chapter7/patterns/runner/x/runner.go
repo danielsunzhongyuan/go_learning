@@ -24,9 +24,11 @@ func New(d time.Duration) *Runner {
 		timeout:   time.After(d),
 	}
 }
+
 func (r *Runner) Add(tasks ...func(int)) {
 	r.tasks = append(r.tasks, tasks...)
 }
+
 func (r *Runner) Start() error {
 	signal.Notify(r.interrupt, os.Interrupt)
 	go func() {

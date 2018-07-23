@@ -50,9 +50,9 @@ func main() {
 	}
 
 	wg.Wait()
+	p.Close()
 
 	log.Println("Shutdown Program.")
-	p.Close()
 }
 
 func performQueries(query int, p *pool.Pool) {
@@ -64,6 +64,6 @@ func performQueries(query int, p *pool.Pool) {
 
 	defer p.Release(conn)
 
-	time.Sleep(time.Duration(rand.Intn(10000)) * time.Millisecond)
+	time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 	log.Printf("Query: QID[%d] CID[%d]\n", query, conn.(*dbConnection).ID)
 }

@@ -7,13 +7,14 @@ import (
 	"time"
 )
 
-const timeout = 3 * time.Second
+// 这个 timeout 是 r.Add 里所有方法的总时长，跟我一开始想的不一样。。。
+const timeout = 11 * time.Second
 
 func main() {
 	log.Println("Starting work.")
 
 	r := runner.New(timeout)
-	r.Add(createTask(), createTask(), createTask())
+	r.Add(createTask(), createTask(), createTask(), createTask(), createTask())
 
 	if err := r.Start(); err != nil {
 		switch err {
@@ -32,5 +33,6 @@ func createTask() func(int) {
 	return func(id int) {
 		log.Printf("Processor - Task #%d.", id)
 		time.Sleep(time.Duration(id) * time.Second)
+		log.Printf("Processor Done - Task #%d.", id)
 	}
 }

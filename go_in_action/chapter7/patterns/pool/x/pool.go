@@ -35,6 +35,9 @@ func (p *Pool) Acquire() (io.Closer, error) {
 			return nil, ErrPoolClosed
 		}
 		return r, nil
+	default:
+		log.Println("Acquire:", "New Resource")
+		return p.factory()
 	}
 }
 

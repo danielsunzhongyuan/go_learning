@@ -23,7 +23,7 @@ func Runner(baton chan int) {
 	fmt.Printf("Runner %d Running with Baton\n", runner)
 	if runner != 4 {
 		newRunner = runner + 1
-		fmt.Printf("Runner %d To the line\n", newRunner)
+		fmt.Printf("Runner %d To the line\n", runner)
 		go Runner(baton)
 	}
 
