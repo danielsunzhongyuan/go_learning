@@ -13,7 +13,9 @@ func main() {
     fmt.Println("get:", s[2])
     fmt.Println("len:", len(s))
 
+	fmt.Println(&s[0])
     s = append(s, "d")
+	fmt.Println(&s[0])     // s has reached its capacity, then it becames a new slice
     s = append(s, "e", "f")
     fmt.Println("append:", s)
 

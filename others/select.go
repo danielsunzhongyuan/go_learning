@@ -3,6 +3,7 @@ package main
 import (
     "fmt"
     "time"
+    "runtime"
 )
 
 func main() {
@@ -27,4 +28,17 @@ func main() {
                 fmt.Println("received", msg2)
         }
     }
+
+    runtime.GOMAXPROCS(1)
+    int_chan := make(chan int, 1)
+    string_chan := make(chan string, 1)
+    int_chan <- 1
+    string_chan <- "hello"
+    select {
+    case value := <-int_chan:
+        fmt.Println(value)
+    case value := <-string_chan:
+        panic(value)
+    }
+    // it will randomly panic or just print 1 instead.
 }
