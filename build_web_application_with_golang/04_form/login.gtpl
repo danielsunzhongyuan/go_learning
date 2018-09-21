@@ -11,6 +11,7 @@
 密码：<input type="password" name="password">
 <input type="hidden" name="token" value="{{.}}">
 <input type="submit" value="登陆">
+<input type="text" name="token" value="{{.}}">
 </form>
 </body>
 </html>
