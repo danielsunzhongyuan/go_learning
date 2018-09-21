@@ -5,12 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/session"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -24,12 +24,14 @@ type Provider interface {
 	SessionDestroy(sid string) error
 	SessionGC(maxLifeTime int64)
 }
+
 type Session interface {
 	Set(key, value interface{}) error
 	Get(key interface{}) interface{}
 	Delete(key interface{}) error
 	SessionID() string
 }
+
 type Manager struct {
 	cookieName  string
 	lock        sync.Mutex
@@ -54,6 +56,7 @@ func Register(name string, provider Provider) {
 	}
 	provides[name] = provider
 }
+
 func (manager *Manager) sessionId() string {
 	b := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, b); err != nil {
@@ -61,6 +64,24 @@ func (manager *Manager) sessionId() string {
 	}
 	return base64.URLEncoding.EncodeToString(b)
 }
+
+func (manager *Manager) SessionStart(w http.ResponseWriter, r *http.Request) (session Session) {
+	manager.lock.Lock()
+	defer manager.lock.Unlock()
+
+	cookie, err := r.Cookie(manager.cookieName)
+	if err != nil || cookie.Value == "" {
+		sid := manager.sessionId()
+		session, _ = manager.provider.SessionInit(sid)
+		cookie := http.Cookie{Name: manager.cookieName, Value: url.QueryEscape(sid), Path: "/", HttpOnly: true, MaxAge: int(manager.maxLifeTime)}
+		http.SetCookie(w, &cookie)
+	} else {
+		sid, _ := url.QueryUnescape(cookie.Value)
+		session, _ = manager.provider.SessionRead(sid)
+	}
+	return
+}
+
 func NewManager(providerName, cookieName string, maxLifeTime int64) (*Manager, error) {
 	provider, ok := provides[providerName]
 	if !ok {
@@ -68,8 +89,9 @@ func NewManager(providerName, cookieName string, maxLifeTime int64) (*Manager, e
 	}
 	return &Manager{provider: provider, cookieName: cookieName, maxLifeTime: maxLifeTime}, nil
 }
+
 func login(w http.ResponseWriter, r *http.Request) {
-	sess, _ := beego.GlobalSessions.SessionStart(w, r)
+	sess, _ := globalSessions.SessionStart(w, r)
 	r.ParseForm()
 	if r.Method == "GET" {
 		cruntime := time.Now().Unix()
@@ -94,6 +116,49 @@ func login(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("password:", template.HTMLEscapeString(r.Form.Get("password")))
 		template.HTMLEscape(w, []byte(r.Form.Get("username")))
 	}
+}
+
+func count(w http.ResponseWriter, r *http.Request) {
+	sess := globalSessions.SessionStart(w, r)
+	createTime := sess.Get("createtime")
+	if createTime == nil {
+		sess.Set("createtime", time.Now().Unix())
+	} else if (createTime.(int64) + 360) < (time.Now().Unix()) {
+		globalSessions.SessionDestroy(w, r)
+		sess = globalSessions.SessionStart(w, r)
+	}
+
+	ct := sess.Get("countnum")
+	if ct == nil {
+		sess.Set("countnum", 1)
+	} else {
+		sess.Set("countnum", (ct.(int) + 1))
+	}
+
+	t, _ := template.ParseFiles("count.gtpl")
+	w.Header().Set("Content-Type", "text/html")
+	t.Execute(w, sess.Get("countnum"))
+}
+
+// Destroy session
+func (manager *Manager) SessionDestroy(w http.ResponseWriter, r *http.Request) {
+	if cookie, err := r.Cookie(manager.cookieName); err != nil || cookie.Value == "" {
+		return
+	} else {
+		manager.lock.Lock()
+		defer manager.lock.Unlock()
+		manager.provider.SessionDestroy(cookie.Value)
+		expiration := time.Now()
+		cookie := http.Cookie{Name: manager.cookieName, Path: "/", HttpOnly: true, Expires: expiration, MaxAge: -1}
+		http.SetCookie(w, &cookie)
+	}
+}
+
+func (manager *Manager) GC() {
+	manager.lock.Lock()
+	defer manager.lock.Unlock()
+	manager.provider.SessionGC(manager.maxLifeTime)
+	time.AfterFunc(time.Duration(manager.maxLifeTime), func() { manager.GC() })
 }
 
 func main() {

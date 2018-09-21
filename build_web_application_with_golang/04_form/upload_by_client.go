@@ -55,6 +55,6 @@ func postFile(filename string, targetUrl string) error {
 
 func main() {
 	targetUrl := "http://localhost:9090/upload"
-	filename := "./login_upload.go"
+	filename := "login_upload.go"
 	postFile(filename, targetUrl)
 }
