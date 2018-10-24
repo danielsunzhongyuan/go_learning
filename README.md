@@ -90,3 +90,5 @@ There are 65 topics, including:
 
 
 截止至 2018-05-11，最新的Go版本是 1.10.2
+
+据说Go 2.0版本后要支持范型了
