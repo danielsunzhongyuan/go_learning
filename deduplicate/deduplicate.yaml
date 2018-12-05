@@ -1,0 +1,8 @@
+csv_separator: ","
+base_key_index:
+  - 7
+change_key_index:
+  - 12
+  - 13
+time_key_index: 0
+timeout: 2500
